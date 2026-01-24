@@ -1,13 +1,13 @@
 # Seven Segment Display Driver
 
-Firmware for a 4-digit 7-segment display driver for the Davies SPA-QUIP v6 device. Provides multiplexed display control using shift registers on an ATmega8A microcontroller.
+Firmware for a 4-digit 7-segment display driver for the Davies SPA-QUIP v6 device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
 
 ## Hardware
 
 - **MCU**: ATmega8A-AU @ 4MHz external crystal
 - **Display**: CA56-125URWA 4-digit common anode 7-segment display
 - **Shift Registers**: Two daisy-chained HEF4094B 8-bit shift registers
-- **Digit Drivers**: BC856 PNP transistors for digit selection
+- **Digit Drivers**: BC856 PNP transistors
 
 ## Pin Configuration
 
@@ -15,36 +15,52 @@ Firmware for a 4-digit 7-segment display driver for the Davies SPA-QUIP v6 devic
 |-----|----------|
 | PD5 (Pin 11) | DATA - Serial data to shift registers |
 | PD6 (Pin 12) | CLOCK - Clock signal to shift registers |
-| PD7 (Pin 13) | STROBE - Latch signal to shift registers |
+| PD7 (Pin 13) | LATCH - Latch/strobe signal to shift registers |
 
-## Features
+## SevSegShift Library
 
-- Display numbers 0-9999 with optional leading zeros
-- Temperature display with decimal point (e.g., 38.5°C)
-- Individual decimal point control
-- Hexadecimal character support (0-F)
-- Efficient multiplexing using only 3 control pins
+This project includes a custom fork of the [SevSeg](https://github.com/untr0py/SevSeg) library modified to support shift register-based displays. The library is located in [lib/SevSegShift/](lib/SevSegShift/).
 
-## API
+### Usage
 
 ```cpp
-// Display a number (0-9999)
-displayNumber(uint16_t number, bool leadingZeros);
+#include <SevSegShift.h>
 
-// Display temperature in tenths of a degree (e.g., 385 = 38.5°C)
-displayTemperature(int16_t tempTenths);
+SevSegShift display;
 
-// Set individual digit (position 0-3, value 0-15)
-setDigit(uint8_t position, uint8_t value);
+void setup() {
+    // begin(displayType, numDigits, dataPin, clockPin, latchPin, leadingZeros)
+    display.begin(COMMON_ANODE, 4, 5, 6, 7);
+}
 
-// Control decimal points
-setDecimalPoint(uint8_t position, bool on);
+void loop() {
+    display.refreshDisplay();  // Call continuously for multiplexing
+}
+```
 
-// Refresh display (call repeatedly in main loop)
-refreshDisplay();
+### API
 
-// Clear all digits
-clearDisplay();
+```cpp
+// Initialize display
+display.begin(COMMON_ANODE, 4, dataPin, clockPin, latchPin);
+
+// Display integer (0-9999)
+display.setNumber(1234);
+
+// Display with decimal point (2nd param = decimal places from right)
+display.setNumber(1234, 2);  // Shows "12.34"
+
+// Display float
+display.setNumberF(12.34, 2);  // Shows "12.34"
+
+// Display characters (0-9, A-F, dash, space)
+display.setChars("CAFE");
+
+// Clear display
+display.blank();
+
+// Adjust brightness (0-100)
+display.setBrightness(80);
 ```
 
 ## Building
