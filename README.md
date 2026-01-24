@@ -63,6 +63,75 @@ display.blank();
 display.setBrightness(80);
 ```
 
+### Examples
+
+**Counter (0-9999)**
+```cpp
+void loop() {
+    static uint16_t counter = 0;
+    static unsigned long lastUpdate = 0;
+
+    display.refreshDisplay();
+
+    if (millis() - lastUpdate >= 1000) {
+        lastUpdate = millis();
+        counter = (counter + 1) % 10000;
+        display.setNumber(counter);
+    }
+}
+```
+
+**Temperature Display**
+```cpp
+void displayTemperature(float tempC) {
+    // Show temperature with 1 decimal place (e.g., 23.5)
+    display.setNumberF(tempC, 1);
+}
+
+void loop() {
+    display.refreshDisplay();
+
+    static unsigned long lastRead = 0;
+    if (millis() - lastRead >= 2000) {
+        lastRead = millis();
+        float temp = readSensor();  // Your sensor reading function
+        displayTemperature(temp);
+    }
+}
+```
+
+**Countdown Timer**
+```cpp
+void loop() {
+    static int16_t seconds = 60;
+    static unsigned long lastTick = 0;
+
+    display.refreshDisplay();
+
+    if (millis() - lastTick >= 1000 && seconds > 0) {
+        lastTick = millis();
+        seconds--;
+        display.setNumber(seconds);
+    }
+
+    if (seconds == 0) {
+        display.setChars("End");
+    }
+}
+```
+
+**Hex Display**
+```cpp
+void loop() {
+    display.refreshDisplay();
+
+    // Display hex values (0-9, A-F)
+    display.setChars("CAFE");  // Shows "CAFE"
+    // Or: display.setChars("DEAD");
+    // Or: display.setChars("BEEF");
+}
+```
+
 ## Building
 
 This project uses PlatformIO with the MiniCore board package.
@@ -78,3 +147,7 @@ pio run --target upload
 ## Schematic
 
 See [schematic.pdf](schematic.pdf) for the hardware design.
+
+## License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
