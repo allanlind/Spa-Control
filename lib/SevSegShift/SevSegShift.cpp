@@ -2,15 +2,11 @@
  * SevSegShift - 7-Segment Display Library with Shift Register Support
  *
  * Fork of SevSeg library adapted for daisy-chained shift registers.
- * Uses optimized assembly routine for shift register timing.
  */
 
 #include "SevSegShift.h"
-
-// External assembly function for fast shift register output
-extern "C" void shiftOut16_asm(uint8_t segments, uint8_t digitSelect);
-
 // Segment patterns (bit order: DP G F E D C B A)
+/**
 static const uint8_t SEGMENT_MAP[] = {
     0b00111111, // 0
     0b00000110, // 1
@@ -28,16 +24,36 @@ static const uint8_t SEGMENT_MAP[] = {
     0b01011110, // d
     0b01111001, // E
     0b01110001, // F
+ */
+
+// Segment patterns (bit order: G C DP D B F E A)
+static const uint8_t SEGMENT_MAP[] = {
+    0b01011111, // 0
+    0b01001000, // 1
+    0b10011011, // 2
+    0b11011001, // 3
+    0b11001100, // 4
+    0b11010101, // 5
+    0b11010111, // 6
+    0b01001001, // 7
+    0b11011111, // 8
+    0b11001101, // 9
+    0b11001111, // A
+    0b11010110, // b
+    0b00010111, // C
+    0b11011010, // d
+    0b10010111, // E
+    0b10000111, // F
 };
 
 static const uint8_t CHAR_BLANK = 0b00000000;
-static const uint8_t CHAR_DASH  = 0b01000000;
+static const uint8_t CHAR_DASH  = 0b10000000;
 
 SevSegShift::SevSegShift() {
-    _numDigits = 4;
+    _numDigits = 3;
     _currentDigit = 0;
     _decimalPoint = 0;
-    _refreshDelay = 2000; // 2ms default
+    _refreshDelay = 6000; // 2ms default
 }
 
 void SevSegShift::begin(uint8_t displayType, uint8_t numDigits,
@@ -68,8 +84,44 @@ void SevSegShift::shiftOut16(uint8_t segments, uint8_t digitSelect) {
         segments = ~segments;
     }
 
-    // Use optimized assembly routine for precise timing
-    shiftOut16_asm(segments, digitSelect);
+    // Ensure all lines start at idle HIGH
+    digitalWrite(_clockPin, HIGH);
+    digitalWrite(_dataPin, HIGH);
+
+    // Shift out segment data (goes to second register in chain)
+    // Falling edge clock, data INVERTED (1=LOW, 0=HIGH)
+    digitalWrite(_clockPin, LOW);   // Falling edge samples data
+
+
+    for (int8_t i = 7; i >= 0; i--) {
+        digitalWrite(_dataPin, !((segments >> i) & 0x01));  // Inverted
+      ;  delayMicroseconds(2);  // Data setup time
+      ;  digitalWrite(_clockPin, LOW);   // Falling edge samples data
+        delayMicroseconds(40);
+        digitalWrite(_clockPin, HIGH);  // Return to idle HIGH
+        delayMicroseconds(20);
+    }
+
+    // Shift out digit select data (goes to first register)
+    digitalWrite(_clockPin, LOW);   // Falling edge samples data
+
+    for (int8_t i = 7; i >= 0; i--) {
+        digitalWrite(_dataPin, !((digitSelect >> i) & 0x01));  // Inverted
+    ;    delayMicroseconds(2);  // Data setup time
+    ;    digitalWrite(_clockPin, LOW);   // Falling edge samples data
+        delayMicroseconds(40);
+        digitalWrite(_clockPin, HIGH);  // Return to idle HIGH
+        delayMicroseconds(20);
+    }
+
+    // Latch data to outputs - INVERTED (active LOW)
+    ; delayMicroseconds(1);
+    digitalWrite(_latchPin, LOW);
+    delayMicroseconds(40);
+    digitalWrite(_latchPin, HIGH);
+
+    // Return data line to idle HIGH state
+    digitalWrite(_dataPin, HIGH);
 }
 
 void SevSegShift::refreshDisplay() {
@@ -77,7 +129,7 @@ void SevSegShift::refreshDisplay() {
 
     // Add decimal point if this is the right digit
     if (_decimalPoint > 0 && _currentDigit == (_numDigits - _decimalPoint)) {
-        segments |= 0b10000000;
+        segments |= 0b00100000;
     }
 
     // Create digit select pattern (active LOW for PNP transistors)
