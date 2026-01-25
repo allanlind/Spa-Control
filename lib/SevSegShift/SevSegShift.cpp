@@ -64,27 +64,28 @@ void SevSegShift::shiftOut16(uint8_t segments, uint8_t digitSelect) {
         segments = ~segments;
     }
 
-    // Ensure clock starts HIGH
+    // Ensure all lines start at idle HIGH
     digitalWrite(_clockPin, HIGH);
+    digitalWrite(_dataPin, HIGH);
 
     // Shift out segment data (goes to second register in chain)
-    // Clock falling edge, data NOT inverted
+    // Falling edge clock, data not inverted
     for (int8_t i = 7; i >= 0; i--) {
-        digitalWrite(_dataPin, (segments >> i) & 0x01);  // Non-inverted data
+        digitalWrite(_dataPin, (segments >> i) & 0x01);
         delayMicroseconds(2);  // Data setup time
         digitalWrite(_clockPin, LOW);   // Falling edge samples data
         delayMicroseconds(2);
-        digitalWrite(_clockPin, HIGH);
+        digitalWrite(_clockPin, HIGH);  // Return to idle HIGH
         delayMicroseconds(2);
     }
 
     // Shift out digit select data (goes to first register)
     for (int8_t i = 7; i >= 0; i--) {
-        digitalWrite(_dataPin, (digitSelect >> i) & 0x01);  // Non-inverted data
+        digitalWrite(_dataPin, (digitSelect >> i) & 0x01);
         delayMicroseconds(2);  // Data setup time
         digitalWrite(_clockPin, LOW);   // Falling edge samples data
         delayMicroseconds(2);
-        digitalWrite(_clockPin, HIGH);
+        digitalWrite(_clockPin, HIGH);  // Return to idle HIGH
         delayMicroseconds(2);
     }
 
@@ -93,6 +94,9 @@ void SevSegShift::shiftOut16(uint8_t segments, uint8_t digitSelect) {
     digitalWrite(_latchPin, LOW);
     delayMicroseconds(2);
     digitalWrite(_latchPin, HIGH);
+
+    // Return data line to idle HIGH state
+    digitalWrite(_dataPin, HIGH);
 }
 
 void SevSegShift::refreshDisplay() {

@@ -5,8 +5,8 @@
 
 #include <SevSegShift.h>
 
-#define DATA_PIN 13  // PB5 - swapped
-#define CLOCK_PIN 11 // PB3 (CP) - swapped
+#define DATA_PIN 11  // PB5 - swapped
+#define CLOCK_PIN 13 // PB3 (CP) - swapped
 #define LATCH_PIN 5  // PD5 (STR)
 
 // Bit timing - use microseconds for realistic speed
