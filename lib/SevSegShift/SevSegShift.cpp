@@ -68,9 +68,9 @@ void SevSegShift::shiftOut16(uint8_t segments, uint8_t digitSelect) {
     digitalWrite(_clockPin, HIGH);
 
     // Shift out segment data (goes to second register in chain)
-    // INVERTED polarity: data inverted, clock falling edge
+    // Clock falling edge, data NOT inverted
     for (int8_t i = 7; i >= 0; i--) {
-        digitalWrite(_dataPin, !((segments >> i) & 0x01));  // Inverted data
+        digitalWrite(_dataPin, (segments >> i) & 0x01);  // Non-inverted data
         delayMicroseconds(2);  // Data setup time
         digitalWrite(_clockPin, LOW);   // Falling edge samples data
         delayMicroseconds(2);
@@ -80,7 +80,7 @@ void SevSegShift::shiftOut16(uint8_t segments, uint8_t digitSelect) {
 
     // Shift out digit select data (goes to first register)
     for (int8_t i = 7; i >= 0; i--) {
-        digitalWrite(_dataPin, !((digitSelect >> i) & 0x01));  // Inverted data
+        digitalWrite(_dataPin, (digitSelect >> i) & 0x01);  // Non-inverted data
         delayMicroseconds(2);  // Data setup time
         digitalWrite(_clockPin, LOW);   // Falling edge samples data
         delayMicroseconds(2);
