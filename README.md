@@ -1,25 +1,63 @@
 # Seven Segment Display Driver
 
-Firmware for a 4-digit 7-segment display driver for the Davies SPA-QUIP v6 device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
+Firmware for a multiplexed 3-digit 7-segment display with status LEDs, designed for the Davies SPA-QUIP v6 device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
 
 ## Hardware
 
-- **MCU**: ATmega8A-AU @ 4MHz external crystal
-- **Display**: CA56-125URWA 4-digit common anode 7-segment display
+- **MCU**: ATmega8A-AU @ 16MHz
+- **Display**: 3-digit common anode 7-segment display
 - **Shift Registers**: Two daisy-chained HEF4094B 8-bit shift registers
-- **Digit Drivers**: BC856 PNP transistors
+- **Digit Drivers**: PNP transistors (active LOW cathode selection)
+- **Status LEDs**: Heater, Auto, Air, Pump
 
 ## Pin Configuration
 
 | Pin | Function |
 |-----|----------|
-| PD5 (Pin 11) | DATA - Serial data to shift registers |
-| PD6 (Pin 12) | CLOCK - Clock signal to shift registers |
-| PD7 (Pin 13) | LATCH - Latch/strobe signal to shift registers |
+| PB3 | DATA - Serial data to shift registers |
+| PB5 | CLOCK - Clock signal to shift registers |
+| PD5 | LATCH/STROBE - Latch signal to shift registers |
+
+## Shift Register Chain
+
+Two cascaded 4094 shift registers receive 16 bits per update:
+
+**First 4094** (LED status + digit selection):
+| Output | Function |
+|--------|----------|
+| QP0 | Heater LED |
+| QP1 | Auto LED |
+| QP3 | Air LED |
+| QP4 | Pump LED |
+| QP5 | Cathode 1 (left digit) |
+| QP6 | Cathode 3 (right digit) |
+| QP7 | Cathode 2 (middle digit) |
+| QS2 | Cascade to second 4094 |
+
+**Second 4094** (segment anodes):
+| Output | Segment |
+|--------|---------|
+| QP0 | g |
+| QP1 | c |
+| QP2 | d.p. |
+| QP3 | d |
+| QP4 | b |
+| QP5 | f |
+| QP6 | e |
+| QP7 | a |
+
+## Signal Timing
+
+All signals use active-LOW logic (idle HIGH):
+- **Data**: Inverted (logic 1 = LOW output)
+- **Clock**: Falling edge samples data
+- **Latch**: Active LOW pulse transfers data to outputs
+
+See [lib/readme.txt](lib/readme.txt) for detailed timing specifications.
 
 ## SevSegShift Library
 
-This project includes a custom fork of the [SevSeg](https://github.com/untr0py/SevSeg) library modified to support shift register-based displays. The library is located in [lib/SevSegShift/](lib/SevSegShift/).
+This project includes a custom fork of the [SevSeg](https://github.com/DeanIsMe/SevSeg) library modified to support shift register-based displays. The library is located in [lib/SevSegShift/](lib/SevSegShift/).
 
 ### Usage
 
@@ -30,7 +68,7 @@ SevSegShift display;
 
 void setup() {
     // begin(displayType, numDigits, dataPin, clockPin, latchPin, leadingZeros)
-    display.begin(COMMON_ANODE, 4, 5, 6, 7);
+    display.begin(COMMON_ANODE, 3, PB3, PB5, PD5);
 }
 
 void loop() {
@@ -42,19 +80,19 @@ void loop() {
 
 ```cpp
 // Initialize display
-display.begin(COMMON_ANODE, 4, dataPin, clockPin, latchPin);
+display.begin(COMMON_ANODE, 3, dataPin, clockPin, latchPin);
 
-// Display integer (0-9999)
-display.setNumber(1234);
+// Display integer
+display.setNumber(123);
 
 // Display with decimal point (2nd param = decimal places from right)
 display.setNumber(1234, 2);  // Shows "12.34"
 
 // Display float
-display.setNumberF(12.34, 2);  // Shows "12.34"
+display.setNumberF(12.3, 1);  // Shows "12.3"
 
 // Display characters (0-9, A-F, dash, space)
-display.setChars("CAFE");
+display.setChars("Er4");
 
 // Clear display
 display.blank();
@@ -65,14 +103,11 @@ display.setBrightness(80);
 
 ### Examples
 
-Complete example sketches are available in the [samples/](samples/) folder:
+Example sketches are available in the [samples/](samples/) folder:
 
 | File | Description |
 |------|-------------|
-| [counter.ino](samples/counter.ino) | Counts from 0 to 9999 |
-| [temperature.ino](samples/temperature.ino) | Displays temperature with decimal point |
-| [countdown.ino](samples/countdown.ino) | Countdown timer with "End" message |
-| [hex_display.ino](samples/hex_display.ino) | Cycles through hex words (CAFE, DEAD, BEEF) |
+| [countdown.ino](samples/countdown.ino) | Countdown timer example |
 
 ## Building
 
@@ -85,10 +120,6 @@ pio run
 # Upload (requires USBASP programmer)
 pio run --target upload
 ```
-
-## Schematic
-
-See [schematic.pdf](schematic.pdf) for the hardware design.
 
 ## License
 
