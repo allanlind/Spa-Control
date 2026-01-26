@@ -10,13 +10,14 @@
 ; Signal polarity (active LOW / inverted):
 ;   - All signals idle HIGH
 ;   - Data: 1=LOW, 0=HIGH (inverted output)
-;   - Clock: RISING edge (LOW->HIGH) samples data (per 4094 datasheet)
+;   - Clock: RISING edge (LOW->HIGH) samples data (per HEF4094B datasheet)
 ;   - Latch: active LOW pulse transfers shift register to outputs
 ;
 ; Timing (at 16MHz, 1 cycle = 62.5ns):
-;   - Data setup before clock rising edge: ~2µs
-;   - Clock HIGH time: ~40µs
-;   - Clock LOW time: ~20µs
+;   - Clock LOW, then set data
+;   - Data setup time: ~2µs
+;   - Clock HIGH (rising edge samples): hold ~40µs
+;   - Clock LOW (prepare next bit): ~20µs
 ;   - Latch pulse width: ~40µs
 ; =============================================================================
 
@@ -67,21 +68,20 @@ shiftOut16_asm:
     push r19
     push r20
 
-    ; Start with clock LOW (prepare for first rising edge)
+    ; Start with clock LOW (data will be set while clock is LOW)
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Clock LOW
-    ori r20, DATA_MASK              ; Data HIGH (idle)
+    ori r20, DATA_MASK              ; Data HIGH (idle/default)
     out _SFR_IO_ADDR(PORTB), r20
 
     ; =========================================================================
     ; Shift out first byte (segments) - 8 bits, MSB first
-    ; Data is set while clock is LOW, then clock goes HIGH (rising edge samples)
+    ; Sequence: Clock LOW -> Set data -> Clock HIGH (samples) -> Clock LOW
     ; =========================================================================
     ldi r18, 8                      ; Bit counter
 
 shift_byte1_loop:
-    ; --- Set data line based on MSB (inverted: 1->LOW, 0->HIGH) ---
-    ; Clock is already LOW from previous iteration (or init)
+    ; --- Clock is LOW, now set data line (inverted: 1->LOW, 0->HIGH) ---
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Ensure clock stays LOW
 
@@ -116,7 +116,7 @@ byte1_high_delay:
     andi r20, ~CLK_MASK
     out _SFR_IO_ADDR(PORTB), r20
 
-    ; --- Clock LOW time (~20µs) ---
+    ; --- Clock LOW time (~20µs) before setting next data ---
     ldi r19, DELAY_20US
 byte1_low_delay:
     dec r19
@@ -134,7 +134,7 @@ byte1_low_delay:
     ldi r18, 8                      ; Reset bit counter
 
 shift_byte2_loop:
-    ; --- Set data line based on MSB (inverted: 1->LOW, 0->HIGH) ---
+    ; --- Clock is LOW, now set data line (inverted: 1->LOW, 0->HIGH) ---
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Ensure clock stays LOW
 
@@ -169,7 +169,7 @@ byte2_high_delay:
     andi r20, ~CLK_MASK
     out _SFR_IO_ADDR(PORTB), r20
 
-    ; --- Clock LOW time (~20µs) ---
+    ; --- Clock LOW time (~20µs) before setting next data ---
     ldi r19, DELAY_20US
 byte2_low_delay:
     dec r19
@@ -184,7 +184,7 @@ byte2_low_delay:
     ; Latch pulse (active LOW) - transfers shift register to outputs
     ; =========================================================================
 
-    ; Return clock and data lines to idle HIGH
+    ; Return clock and data to idle HIGH
     in r20, _SFR_IO_ADDR(PORTB)
     ori r20, (DATA_MASK | CLK_MASK)
     out _SFR_IO_ADDR(PORTB), r20
