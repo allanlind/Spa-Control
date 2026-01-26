@@ -13,11 +13,16 @@
 ;   - Clock: RISING edge (LOW->HIGH) samples data (per HEF4094B datasheet)
 ;   - Latch: active LOW pulse transfers shift register to outputs
 ;
+; Pre-sequence before each word:
+;   1. Data LOW (while clock still HIGH)
+;   2. Clock LOW
+;   3. Then begin bit shifting
+;
 ; Timing (at 16MHz, 1 cycle = 62.5ns):
-;   - Clock LOW, then set data
+;   - Pre-sequence delays: ~16µs each
 ;   - Data setup time: ~2µs
-;   - Clock HIGH (rising edge samples): hold ~40µs
-;   - Clock LOW (prepare next bit): ~20µs
+;   - Clock HIGH hold: ~40µs
+;   - Clock LOW time: ~20µs
 ;   - Latch pulse width: ~40µs
 ; =============================================================================
 
@@ -37,6 +42,7 @@
 ; Each loop iteration = 3 cycles (dec + brne)
 ; delay_us = (count * 3) / 16
 .equ DELAY_2US,   10    ; ~2µs  (10 * 3 = 30 cycles = 1.875µs)
+.equ DELAY_16US,  85    ; ~16µs (85 * 3 = 255 cycles = 15.9µs)
 .equ DELAY_20US,  106   ; ~20µs (106 * 3 = 318 cycles = 19.875µs)
 .equ DELAY_40US,  213   ; ~40µs (213 * 3 = 639 cycles = 39.9µs)
 
@@ -68,20 +74,44 @@ shiftOut16_asm:
     push r19
     push r20
 
-    ; Start with clock LOW (data will be set while clock is LOW)
+    ; =========================================================================
+    ; PRE-SEQUENCE: Data LOW first, then Clock LOW
+    ; This signals the start of a new word transmission
+    ; =========================================================================
+
+    ; Ensure we start from idle state (both HIGH)
     in r20, _SFR_IO_ADDR(PORTB)
-    andi r20, ~CLK_MASK             ; Clock LOW
-    ori r20, DATA_MASK              ; Data HIGH (idle/default)
+    ori r20, (CLK_MASK | DATA_MASK)
     out _SFR_IO_ADDR(PORTB), r20
+
+    ; Step 1: Take Data LOW (clock still HIGH)
+    andi r20, ~DATA_MASK
+    out _SFR_IO_ADDR(PORTB), r20
+
+    ; Wait ~16µs
+    ldi r19, DELAY_16US
+preseq_delay1:
+    dec r19
+    brne preseq_delay1
+
+    ; Step 2: Take Clock LOW (data already LOW)
+    andi r20, ~CLK_MASK
+    out _SFR_IO_ADDR(PORTB), r20
+
+    ; Wait ~16µs
+    ldi r19, DELAY_16US
+preseq_delay2:
+    dec r19
+    brne preseq_delay2
 
     ; =========================================================================
     ; Shift out first byte (segments) - 8 bits, MSB first
-    ; Sequence: Clock LOW -> Set data -> Clock HIGH (samples) -> Clock LOW
+    ; Clock is LOW, ready to set data and pulse clock HIGH
     ; =========================================================================
     ldi r18, 8                      ; Bit counter
 
 shift_byte1_loop:
-    ; --- Clock is LOW, now set data line (inverted: 1->LOW, 0->HIGH) ---
+    ; --- Set data line (inverted: 1->LOW, 0->HIGH) while clock is LOW ---
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Ensure clock stays LOW
 
@@ -116,7 +146,7 @@ byte1_high_delay:
     andi r20, ~CLK_MASK
     out _SFR_IO_ADDR(PORTB), r20
 
-    ; --- Clock LOW time (~20µs) before setting next data ---
+    ; --- Clock LOW time (~20µs) ---
     ldi r19, DELAY_20US
 byte1_low_delay:
     dec r19
@@ -129,12 +159,13 @@ byte1_low_delay:
 
     ; =========================================================================
     ; Shift out second byte (digitSelect) - 8 bits, MSB first
+    ; Clock is already LOW from last bit of first byte
     ; =========================================================================
     mov r24, r22                    ; Move digitSelect to working register
     ldi r18, 8                      ; Reset bit counter
 
 shift_byte2_loop:
-    ; --- Clock is LOW, now set data line (inverted: 1->LOW, 0->HIGH) ---
+    ; --- Set data line (inverted: 1->LOW, 0->HIGH) while clock is LOW ---
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Ensure clock stays LOW
 
@@ -169,7 +200,7 @@ byte2_high_delay:
     andi r20, ~CLK_MASK
     out _SFR_IO_ADDR(PORTB), r20
 
-    ; --- Clock LOW time (~20µs) before setting next data ---
+    ; --- Clock LOW time (~20µs) ---
     ldi r19, DELAY_20US
 byte2_low_delay:
     dec r19
@@ -188,6 +219,12 @@ byte2_low_delay:
     in r20, _SFR_IO_ADDR(PORTB)
     ori r20, (DATA_MASK | CLK_MASK)
     out _SFR_IO_ADDR(PORTB), r20
+
+    ; Small delay before latch
+    ldi r19, DELAY_2US
+pre_latch_delay:
+    dec r19
+    brne pre_latch_delay
 
     ; Latch LOW (active - begin transfer)
     cbi _SFR_IO_ADDR(PORTD), STR_BIT

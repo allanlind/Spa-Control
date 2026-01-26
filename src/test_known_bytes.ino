@@ -24,9 +24,17 @@ extern "C" void shiftOut16_asm(uint8_t segments, uint8_t digitSelect);
 
 // Manual bit-bang version for comparison
 void shiftOut16_manual(uint8_t segments, uint8_t digitSelect) {
-    // Start with clock LOW (data set while clock is LOW)
+    // Ensure idle state (both HIGH)
+    PORTB |= (1 << DATA_PIN) | (1 << CLOCK_PIN);
+
+    // PRE-SEQUENCE: Data LOW first, then Clock LOW
+    // Step 1: Data LOW (clock still HIGH)
+    PORTB &= ~(1 << DATA_PIN);
+    delayMicroseconds(16);
+
+    // Step 2: Clock LOW (data already LOW)
     PORTB &= ~(1 << CLOCK_PIN);
-    PORTB |= (1 << DATA_PIN);  // Data idle HIGH
+    delayMicroseconds(16);
 
     // Shift out segments (first byte) - MSB first
     for (int8_t i = 7; i >= 0; i--) {
@@ -70,7 +78,7 @@ void shiftOut16_manual(uint8_t segments, uint8_t digitSelect) {
     PORTB |= (1 << DATA_PIN) | (1 << CLOCK_PIN);
 
     // Latch pulse
-    delayMicroseconds(1);
+    delayMicroseconds(2);
     PORTD &= ~(1 << LATCH_PIN);  // Latch LOW
     delayMicroseconds(40);
     PORTD |= (1 << LATCH_PIN);   // Latch HIGH
