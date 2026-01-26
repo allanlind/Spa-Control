@@ -10,13 +10,13 @@
 ; Signal polarity (active LOW / inverted):
 ;   - All signals idle HIGH
 ;   - Data: 1=LOW, 0=HIGH (inverted output)
-;   - Clock: falling edge (HIGH->LOW) samples data
-;   - Latch: active LOW pulse transfers data to outputs
+;   - Clock: RISING edge (LOW->HIGH) samples data (per 4094 datasheet)
+;   - Latch: active LOW pulse transfers shift register to outputs
 ;
 ; Timing (at 16MHz, 1 cycle = 62.5ns):
-;   - Data setup before clock falling edge: ~2µs
-;   - Clock LOW hold time: ~40µs
-;   - Clock HIGH between bits: ~20µs
+;   - Data setup before clock rising edge: ~2µs
+;   - Clock HIGH time: ~40µs
+;   - Clock LOW time: ~20µs
 ;   - Latch pulse width: ~40µs
 ; =============================================================================
 
@@ -67,30 +67,34 @@ shiftOut16_asm:
     push r19
     push r20
 
-    ; Ensure clock and data start HIGH (idle state)
+    ; Start with clock LOW (prepare for first rising edge)
     in r20, _SFR_IO_ADDR(PORTB)
-    ori r20, (CLK_MASK | DATA_MASK)
+    andi r20, ~CLK_MASK             ; Clock LOW
+    ori r20, DATA_MASK              ; Data HIGH (idle)
     out _SFR_IO_ADDR(PORTB), r20
 
     ; =========================================================================
     ; Shift out first byte (segments) - 8 bits, MSB first
+    ; Data is set while clock is LOW, then clock goes HIGH (rising edge samples)
     ; =========================================================================
-    ldi r18, 8                  ; Bit counter
+    ldi r18, 8                      ; Bit counter
 
 shift_byte1_loop:
     ; --- Set data line based on MSB (inverted: 1->LOW, 0->HIGH) ---
+    ; Clock is already LOW from previous iteration (or init)
     in r20, _SFR_IO_ADDR(PORTB)
-    sbrc r24, 7                 ; Skip if bit 7 is clear
+    andi r20, ~CLK_MASK             ; Ensure clock stays LOW
+
+    sbrc r24, 7                     ; Skip if bit 7 is clear
     rjmp byte1_bit_set
-    ; Bit is 0 -> output HIGH
+    ; Bit is 0 -> output HIGH (inverted)
     ori r20, DATA_MASK
     rjmp byte1_output
 byte1_bit_set:
-    ; Bit is 1 -> output LOW
+    ; Bit is 1 -> output LOW (inverted)
     andi r20, ~DATA_MASK
 byte1_output:
-    ori r20, CLK_MASK           ; Keep clock HIGH while setting data
-    out _SFR_IO_ADDR(PORTB), r20
+    out _SFR_IO_ADDR(PORTB), r20    ; Data set, clock still LOW
 
     ; --- Data setup delay (~2µs) ---
     ldi r19, DELAY_2US
@@ -98,25 +102,25 @@ byte1_setup_delay:
     dec r19
     brne byte1_setup_delay
 
-    ; --- Clock LOW (falling edge - 4094 samples data here) ---
-    andi r20, ~CLK_MASK
-    out _SFR_IO_ADDR(PORTB), r20
-
-    ; --- Clock LOW hold time (~40µs) ---
-    ldi r19, DELAY_40US
-byte1_low_delay:
-    dec r19
-    brne byte1_low_delay
-
-    ; --- Clock HIGH (return to idle) ---
+    ; --- Clock HIGH (RISING edge - 4094 samples data here) ---
     ori r20, CLK_MASK
     out _SFR_IO_ADDR(PORTB), r20
 
-    ; --- Clock HIGH time (~20µs) before next bit ---
-    ldi r19, DELAY_20US
+    ; --- Clock HIGH hold time (~40µs) ---
+    ldi r19, DELAY_40US
 byte1_high_delay:
     dec r19
     brne byte1_high_delay
+
+    ; --- Clock LOW (prepare for next bit) ---
+    andi r20, ~CLK_MASK
+    out _SFR_IO_ADDR(PORTB), r20
+
+    ; --- Clock LOW time (~20µs) ---
+    ldi r19, DELAY_20US
+byte1_low_delay:
+    dec r19
+    brne byte1_low_delay
 
     ; Shift to next bit
     lsl r24
@@ -126,23 +130,24 @@ byte1_high_delay:
     ; =========================================================================
     ; Shift out second byte (digitSelect) - 8 bits, MSB first
     ; =========================================================================
-    mov r24, r22                ; Move digitSelect to working register
-    ldi r18, 8                  ; Reset bit counter
+    mov r24, r22                    ; Move digitSelect to working register
+    ldi r18, 8                      ; Reset bit counter
 
 shift_byte2_loop:
     ; --- Set data line based on MSB (inverted: 1->LOW, 0->HIGH) ---
     in r20, _SFR_IO_ADDR(PORTB)
-    sbrc r24, 7                 ; Skip if bit 7 is clear
+    andi r20, ~CLK_MASK             ; Ensure clock stays LOW
+
+    sbrc r24, 7                     ; Skip if bit 7 is clear
     rjmp byte2_bit_set
-    ; Bit is 0 -> output HIGH
+    ; Bit is 0 -> output HIGH (inverted)
     ori r20, DATA_MASK
     rjmp byte2_output
 byte2_bit_set:
-    ; Bit is 1 -> output LOW
+    ; Bit is 1 -> output LOW (inverted)
     andi r20, ~DATA_MASK
 byte2_output:
-    ori r20, CLK_MASK           ; Keep clock HIGH while setting data
-    out _SFR_IO_ADDR(PORTB), r20
+    out _SFR_IO_ADDR(PORTB), r20    ; Data set, clock still LOW
 
     ; --- Data setup delay (~2µs) ---
     ldi r19, DELAY_2US
@@ -150,25 +155,25 @@ byte2_setup_delay:
     dec r19
     brne byte2_setup_delay
 
-    ; --- Clock LOW (falling edge - 4094 samples data here) ---
-    andi r20, ~CLK_MASK
-    out _SFR_IO_ADDR(PORTB), r20
-
-    ; --- Clock LOW hold time (~40µs) ---
-    ldi r19, DELAY_40US
-byte2_low_delay:
-    dec r19
-    brne byte2_low_delay
-
-    ; --- Clock HIGH (return to idle) ---
+    ; --- Clock HIGH (RISING edge - 4094 samples data here) ---
     ori r20, CLK_MASK
     out _SFR_IO_ADDR(PORTB), r20
 
-    ; --- Clock HIGH time (~20µs) before next bit ---
-    ldi r19, DELAY_20US
+    ; --- Clock HIGH hold time (~40µs) ---
+    ldi r19, DELAY_40US
 byte2_high_delay:
     dec r19
     brne byte2_high_delay
+
+    ; --- Clock LOW (prepare for next bit) ---
+    andi r20, ~CLK_MASK
+    out _SFR_IO_ADDR(PORTB), r20
+
+    ; --- Clock LOW time (~20µs) ---
+    ldi r19, DELAY_20US
+byte2_low_delay:
+    dec r19
+    brne byte2_low_delay
 
     ; Shift to next bit
     lsl r24
@@ -179,9 +184,9 @@ byte2_high_delay:
     ; Latch pulse (active LOW) - transfers shift register to outputs
     ; =========================================================================
 
-    ; Return data line to idle HIGH
+    ; Return clock and data lines to idle HIGH
     in r20, _SFR_IO_ADDR(PORTB)
-    ori r20, DATA_MASK
+    ori r20, (DATA_MASK | CLK_MASK)
     out _SFR_IO_ADDR(PORTB), r20
 
     ; Latch LOW (active - begin transfer)

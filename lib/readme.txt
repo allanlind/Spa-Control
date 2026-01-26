@@ -87,15 +87,15 @@ a 16-bit word as two sequential 8-bit bytes:
 
 Signal Behavior:
   - Data is inverted: logic 1 = LOW output, logic 0 = HIGH output
-  - Clock: falling edge (HIGH->LOW) samples data
+  - Clock: RISING edge (LOW->HIGH) samples data (per HEF4094B datasheet)
   - Latch: active LOW pulse transfers shift register to outputs
 
 Bit Timing (per bit, at 16MHz):
-  1. Set data line (inverted), clock remains HIGH
+  1. Clock LOW, set data line (inverted)
   2. Wait ~2µs (data setup time)
-  3. Clock LOW (falling edge - 4094 samples data here)
-  4. Wait ~40µs (clock LOW hold time)
-  5. Clock HIGH (return to idle)
+  3. Clock HIGH (RISING edge - 4094 samples data here)
+  4. Wait ~40µs (clock HIGH hold time)
+  5. Clock LOW (prepare for next bit)
   6. Wait ~20µs (before next bit)
 
 Transmission Sequence:

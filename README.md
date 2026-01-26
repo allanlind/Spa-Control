@@ -50,7 +50,7 @@ Two cascaded 4094 shift registers receive 16 bits per update:
 
 All signals use active-LOW logic (idle HIGH):
 - **Data**: Inverted (logic 1 = LOW output)
-- **Clock**: Falling edge samples data
+- **Clock**: Rising edge (LOW→HIGH) samples data (per HEF4094B datasheet)
 - **Latch**: Active LOW pulse transfers data to outputs
 
 See [lib/readme.txt](lib/readme.txt) for detailed timing specifications.
