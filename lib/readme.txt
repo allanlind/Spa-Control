@@ -77,19 +77,31 @@ Bit order: G C DP D B F E A
   0b10100010  // r.  (used for error codes, e.g., Er.4)
 
 
-Assembly Code Timing Requirements
----------------------------------
-Data, Clock, and Latch are normally held high. Two 8-bit words are
-sent every 6ms using the following sequence:
+Shift Register Timing
+---------------------
+All signals idle HIGH (active-LOW logic). Each display update sends
+a 16-bit word as two sequential 8-bit bytes:
 
- 1. Take Data line low.
- 2. 16µs later, take Clock low.
- 3. 16µs later, take Clock high.
- 4. Send first 8-bit word (Data transitions on rising edge of Clock).
- 5. On the 8th rising edge, hold Clock high for 30µs, then go low.
- 6. 16µs after the 8th rising edge, take Data low for 30µs.
- 7. Return Data and Clock lines high.
- 8. Send second 8-bit word (Data transitions on rising edge of Clock).
- 9. After the 8th rising edge, return Data and Clock lines high.
-10. 8µs later, take Latch low for 40µs, then leave high.
-11. Hold Data and Clock high for 6ms, then repeat from step 1.
+  Byte 1: Segment anode data (shifted to second 4094)
+  Byte 2: LED status + digit cathode selection (shifted to first 4094)
+
+Signal Behavior:
+  - Data is inverted: logic 1 = LOW output, logic 0 = HIGH output
+  - Clock: falling edge (HIGH->LOW) samples data
+  - Latch: active LOW pulse transfers shift register to outputs
+
+Bit Timing (per bit, at 16MHz):
+  1. Set data line (inverted), clock remains HIGH
+  2. Wait ~2µs (data setup time)
+  3. Clock LOW (falling edge - 4094 samples data here)
+  4. Wait ~40µs (clock LOW hold time)
+  5. Clock HIGH (return to idle)
+  6. Wait ~20µs (before next bit)
+
+Transmission Sequence:
+  1. Ensure Clock and Data are HIGH (idle)
+  2. Shift out 8 bits of segment data (MSB first)
+  3. Shift out 8 bits of digit/LED data (MSB first)
+  4. Return Data line to HIGH
+  5. Latch LOW for ~40µs, then HIGH (transfers data to outputs)
+  6. Wait ~5ms before next digit refresh (~167Hz multiplexing)
