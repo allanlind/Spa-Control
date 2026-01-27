@@ -1,6 +1,6 @@
 # Seven Segment Display Driver
 
-Firmware for a multiplexed 3-digit 7-segment display with status LEDs, designed for the Davies SPA-QUIP v6 device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
+Firmware for a multiplexed 3-digit 7-segment display with status LEDs, designed for the Spa Control device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
 
 ## Hardware
 
@@ -48,8 +48,8 @@ Two cascaded 4094 shift registers receive 16 bits per update:
 
 ## Signal Timing
 
-All signals use active-LOW logic (idle HIGH):
-- **Data**: Inverted (logic 1 = LOW output)
+All signals idle HIGH:
+- **Data**: Sent directly (no inversion - caller provides raw wire values)
 - **Clock**: Rising edge (LOW→HIGH) samples data (per HEF4094B datasheet)
 - **Latch**: Active LOW pulse transfers data to outputs
 

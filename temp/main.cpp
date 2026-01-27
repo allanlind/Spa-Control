@@ -1,5 +1,5 @@
 /**
- * 4-Digit 7-Segment Display for Davies SPA-QUIP v6
+ * 4-Digit 7-Segment Display for Spa Control
  *
  * Hardware:
  *   MCU: ATmega8A-AU @ 4MHz

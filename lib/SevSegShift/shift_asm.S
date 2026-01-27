@@ -1,15 +1,14 @@
 ; =============================================================================
 ; HEF4094B Shift Register Assembly Routine for ATmega8
-; Optimized for inverted signal polarity (all signals active LOW)
 ;
 ; Pin assignments:
 ;   DATA  = PB3 (bit 3 of PORTB)
 ;   CLOCK = PB5 (bit 5 of PORTB)
 ;   LATCH = PD5 (bit 5 of PORTD)
 ;
-; Signal polarity (active LOW / inverted):
+; Signal behavior:
 ;   - All signals idle HIGH
-;   - Data: 1=LOW, 0=HIGH (inverted output)
+;   - Data: sent directly (no inversion - caller provides raw wire values)
 ;   - Clock: RISING edge (LOW->HIGH) samples data (per HEF4094B datasheet)
 ;   - Latch: active LOW pulse transfers shift register to outputs
 ;
@@ -50,19 +49,18 @@
     .global shiftOut16_asm
 
 ; =============================================================================
-; void shiftOut16_asm(uint8_t segments, uint8_t digitSelect)
+; void shiftOut16_asm(uint8_t byte1, uint8_t byte2)
 ;
 ; Shifts out 16 bits to cascaded 4094 shift registers.
-; First byte (segments) goes to second register in chain (segment anodes).
-; Second byte (digitSelect) goes to first register (LEDs + cathodes).
+; Data is sent directly without inversion (caller provides raw wire values).
 ;
 ; Parameters:
-;   r24 = segments (first byte - segment data for second 4094)
-;   r22 = digitSelect (second byte - LEDs/cathodes for first 4094)
+;   r24 = byte1 (first byte to shift out)
+;   r22 = byte2 (second byte to shift out)
 ;
 ; Registers used:
 ;   r24 = current byte being shifted
-;   r22 = second byte (digitSelect), saved
+;   r22 = second byte, saved
 ;   r18 = bit counter
 ;   r19 = delay loop counter
 ;   r20 = PORTB shadow register
@@ -105,24 +103,24 @@ preseq_delay2:
     brne preseq_delay2
 
     ; =========================================================================
-    ; Shift out first byte (segments) - 8 bits, MSB first
-    ; Clock is LOW, ready to set data and pulse clock HIGH
+    ; Shift out first byte - 8 bits, MSB first
+    ; NO INVERSION - data is sent directly as provided
     ; =========================================================================
     ldi r18, 8                      ; Bit counter
 
 shift_byte1_loop:
-    ; --- Set data line (inverted: 1->LOW, 0->HIGH) while clock is LOW ---
+    ; --- Set data line directly (no inversion) while clock is LOW ---
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Ensure clock stays LOW
 
     sbrc r24, 7                     ; Skip if bit 7 is clear
     rjmp byte1_bit_set
-    ; Bit is 0 -> output HIGH (inverted)
-    ori r20, DATA_MASK
+    ; Bit is 0 -> output LOW
+    andi r20, ~DATA_MASK
     rjmp byte1_output
 byte1_bit_set:
-    ; Bit is 1 -> output LOW (inverted)
-    andi r20, ~DATA_MASK
+    ; Bit is 1 -> output HIGH
+    ori r20, DATA_MASK
 byte1_output:
     out _SFR_IO_ADDR(PORTB), r20    ; Data set, clock still LOW
 
@@ -158,25 +156,25 @@ byte1_low_delay:
     brne shift_byte1_loop
 
     ; =========================================================================
-    ; Shift out second byte (digitSelect) - 8 bits, MSB first
-    ; Clock is already LOW from last bit of first byte
+    ; Shift out second byte - 8 bits, MSB first
+    ; NO INVERSION - data is sent directly as provided
     ; =========================================================================
-    mov r24, r22                    ; Move digitSelect to working register
+    mov r24, r22                    ; Move byte2 to working register
     ldi r18, 8                      ; Reset bit counter
 
 shift_byte2_loop:
-    ; --- Set data line (inverted: 1->LOW, 0->HIGH) while clock is LOW ---
+    ; --- Set data line directly (no inversion) while clock is LOW ---
     in r20, _SFR_IO_ADDR(PORTB)
     andi r20, ~CLK_MASK             ; Ensure clock stays LOW
 
     sbrc r24, 7                     ; Skip if bit 7 is clear
     rjmp byte2_bit_set
-    ; Bit is 0 -> output HIGH (inverted)
-    ori r20, DATA_MASK
+    ; Bit is 0 -> output LOW
+    andi r20, ~DATA_MASK
     rjmp byte2_output
 byte2_bit_set:
-    ; Bit is 1 -> output LOW (inverted)
-    andi r20, ~DATA_MASK
+    ; Bit is 1 -> output HIGH
+    ori r20, DATA_MASK
 byte2_output:
     out _SFR_IO_ADDR(PORTB), r20    ; Data set, clock still LOW
 

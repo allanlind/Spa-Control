@@ -78,50 +78,65 @@ void SevSegShift::begin(uint8_t displayType, uint8_t numDigits,
     blank();
 }
 
-void SevSegShift::shiftOut16(uint8_t segments, uint8_t digitSelect) {
-    // Invert segments for common anode display
-    if (_displayType == COMMON_ANODE) {
-        segments = ~segments;
-    }
+void SevSegShift::shiftOut16(uint8_t byte1, uint8_t byte2) {
+    // Ensure idle state (both HIGH)
+    PORTB |= (1 << _clockPin) | (1 << _dataPin);
 
-    // Ensure all lines start at idle HIGH
-    digitalWrite(_clockPin, HIGH);
-    digitalWrite(_dataPin, HIGH);
+    // PRE-SEQUENCE: Data LOW first, then Clock LOW
+    // Step 1: Data LOW (clock still HIGH)
+    PORTB &= ~(1 << _dataPin);
+    delayMicroseconds(16);
 
-    // Shift out segment data (goes to second register in chain)
-    // Falling edge clock, data INVERTED (1=LOW, 0=HIGH)
-    digitalWrite(_clockPin, LOW);   // Falling edge samples data
+    // Step 2: Clock LOW (data still LOW) - ready for first bit
+    PORTB &= ~(1 << _clockPin);
+    delayMicroseconds(16);
 
-
+    // Shift out first byte - MSB first (NO inversion - raw wire values)
     for (int8_t i = 7; i >= 0; i--) {
-        digitalWrite(_dataPin, !((segments >> i) & 0x01));  // Inverted
-      ;  delayMicroseconds(2);  // Data setup time
-      ;  digitalWrite(_clockPin, LOW);   // Falling edge samples data
+        // Clock is LOW - set data directly
+        if ((byte1 >> i) & 0x01) {
+            PORTB |= (1 << _dataPin);   // Bit 1 -> HIGH
+        } else {
+            PORTB &= ~(1 << _dataPin);  // Bit 0 -> LOW
+        }
+        delayMicroseconds(2);  // Data setup time
+
+        // Clock HIGH (rising edge samples data)
+        PORTB |= (1 << _clockPin);
         delayMicroseconds(40);
-        digitalWrite(_clockPin, HIGH);  // Return to idle HIGH
+
+        // Clock LOW (prepare for next bit)
+        PORTB &= ~(1 << _clockPin);
         delayMicroseconds(20);
     }
 
-    // Shift out digit select data (goes to first register)
-    digitalWrite(_clockPin, LOW);   // Falling edge samples data
-
+    // Shift out second byte - MSB first (NO inversion - raw wire values)
     for (int8_t i = 7; i >= 0; i--) {
-        digitalWrite(_dataPin, !((digitSelect >> i) & 0x01));  // Inverted
-    ;    delayMicroseconds(2);  // Data setup time
-    ;    digitalWrite(_clockPin, LOW);   // Falling edge samples data
+        // Clock is LOW - set data directly
+        if ((byte2 >> i) & 0x01) {
+            PORTB |= (1 << _dataPin);   // Bit 1 -> HIGH
+        } else {
+            PORTB &= ~(1 << _dataPin);  // Bit 0 -> LOW
+        }
+        delayMicroseconds(2);  // Data setup time
+
+        // Clock HIGH (rising edge samples data)
+        PORTB |= (1 << _clockPin);
         delayMicroseconds(40);
-        digitalWrite(_clockPin, HIGH);  // Return to idle HIGH
+
+        // Clock LOW (prepare for next bit)
+        PORTB &= ~(1 << _clockPin);
         delayMicroseconds(20);
     }
 
-    // Latch data to outputs - INVERTED (active LOW)
-    ; delayMicroseconds(1);
-    digitalWrite(_latchPin, LOW);
+    // Return to idle HIGH
+    PORTB |= (1 << _dataPin) | (1 << _clockPin);
+
+    // Latch pulse (active LOW)
+    delayMicroseconds(2);
+    PORTD &= ~(1 << _latchPin);  // Latch LOW
     delayMicroseconds(40);
-    digitalWrite(_latchPin, HIGH);
-
-    // Return data line to idle HIGH state
-    digitalWrite(_dataPin, HIGH);
+    PORTD |= (1 << _latchPin);   // Latch HIGH
 }
 
 void SevSegShift::refreshDisplay() {

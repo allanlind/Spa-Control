@@ -86,7 +86,7 @@ a 16-bit word as two sequential 8-bit bytes:
   Byte 2: LED status + digit cathode selection (shifted to first 4094)
 
 Signal Behavior:
-  - Data is inverted: logic 1 = LOW output, logic 0 = HIGH output
+  - Data: sent directly (no inversion - caller provides raw wire values)
   - Clock: RISING edge (LOW->HIGH) samples data (per HEF4094B datasheet)
   - Latch: active LOW pulse transfers shift register to outputs
 
@@ -97,7 +97,7 @@ Pre-Sequence (start of each word):
   4. Wait ~16µs
 
 Bit Timing (per bit, at 16MHz):
-  1. Set data line (inverted) while clock is LOW
+  1. Set data line directly while clock is LOW
   2. Wait ~2µs (data setup time)
   3. Clock HIGH (RISING edge - 4094 samples data here)
   4. Wait ~40µs (clock HIGH hold time)

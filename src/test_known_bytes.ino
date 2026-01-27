@@ -139,16 +139,16 @@ void loop() {
 
     switch (digit) {
         case 0:  // E on left digit
-            byte1 = 0x89;
-            byte2 = heaterState ? 0xC2 : 0xC0;  // With/without heater
+            byte1 = 0xE9;
+            byte2 = 0xC2;
             break;
         case 1:  // r on middle digit (no decimal point)
             byte1 = 0x41;
-            byte2 = heaterState ? 0x63 : 0x62;  // With/without heater
+            byte2 = 0x62;
             break;
         case 2:  // 4 on right digit
-            byte1 = 0x38;
-            byte2 = heaterState ? 0x42 : 0x40;  // With/without heater
+            byte1 = 0x33;
+            byte2 = 0xA2;
             break;
     }
 
