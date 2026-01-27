@@ -129,41 +129,38 @@ void loop() {
     // Digit 1 (left) = QP5 LOW = bit 5 = 0, others HIGH = 0b11011111 = 0xDF
 
     static uint8_t digit = 0;
+    static uint8_t heaterState = 0;  // Toggle for flashing
 
-    // Segment patterns (from readme, bit order G C DP D B F E A)
-    const uint8_t seg_E = 0x97;   // E = 0b10010111
-    const uint8_t seg_r = 0xA2;   // r. = 0b10100010
-    const uint8_t seg_4 = 0xCC;   // 4 = 0b11001100
+    // Correct byte values from working MCU scope capture
+    // Format: {byte1 (digit/LEDs), byte2 (segments)}
+    // Heater LED = bit 1 (0x02) in byte1
 
-    // Digit select patterns (active LOW cathodes via PNP)
-    // QP5=Cathode1(left), QP7=Cathode2(middle), QP6=Cathode3(right)
-    // Heater LED = QP0 (bit 0)
-    const uint8_t dig_left   = 0b11011111;  // QP5 LOW = left digit
-    const uint8_t dig_middle = 0b01111111;  // QP7 LOW = middle digit
-    const uint8_t dig_right  = 0b10111111;  // QP6 LOW = right digit
-
-    uint8_t segments, digitSelect;
+    uint8_t byte1, byte2;
 
     switch (digit) {
-        case 0:
-            segments = seg_E;
-            digitSelect = dig_left | 0x01;  // Left digit + heater ON
+        case 0:  // E on left digit
+            byte1 = 0x89;
+            byte2 = heaterState ? 0xC2 : 0xC0;  // With/without heater
             break;
-        case 1:
-            segments = seg_r;
-            digitSelect = dig_middle | 0x01;  // Middle digit + heater ON
+        case 1:  // r. on middle digit
+            byte1 = 0x41;
+            byte2 = heaterState ? 0x63 : 0x62;  // With/without heater
             break;
-        case 2:
-            segments = seg_4;
-            digitSelect = dig_right | 0x01;  // Right digit + heater ON
+        case 2:  // 4 on right digit
+            byte1 = 0x38;
+            byte2 = heaterState ? 0x42 : 0x40;  // With/without heater
             break;
     }
 
-    // Use manual bit-bang (change to shiftOut16_asm to test assembly)
-    shiftOut16_manual(segments, digitSelect);
-    // shiftOut16_asm(segments, digitSelect);
+    // NOTE: byte order is swapped - byte1 first, then byte2
+    shiftOut16_manual(byte1, byte2);
+    // shiftOut16_asm(byte1, byte2);
 
-    digit = (digit + 1) % 3;
+    digit++;
+    if (digit >= 3) {
+        digit = 0;
+        heaterState = !heaterState;  // Toggle heater every full cycle
+    }
 
     delayMicroseconds(5000);  // 5ms refresh
 }
