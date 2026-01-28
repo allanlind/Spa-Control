@@ -65,8 +65,11 @@ One 4021 shift register transmit 8 bits per update:
 | D5 | Air Push Button |
 | D6 | Temperature Up Push Button |
 | D7 | Temperature Down Button |
+
 | Output | Function |
+|--------|----------|
 | Q7 | Data to MCU
+
 
 ## Signal Timing
 
