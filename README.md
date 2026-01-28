@@ -6,17 +6,21 @@ Firmware for an after market Spa Pool Controller incorporating a multiplexed 3-d
 
 - **MCU**: ATmega8A-AU @ 16MHz
 - **Display**: 3-digit common anode 7-segment display
-- **Shift Registers**: Two daisy-chained HEF4094B 8-bit shift registers
+- **Shift Registers**: Two daisy-chained HEF4094B 8-bit shift registers for LED Display and Indicators, One HEF4021B 8-bit shift register for aquiring push button and DIP Switch status.
 - **Digit Drivers**: PNP transistors (active LOW cathode selection)
 - **Status LEDs**: Heater, Auto, Air, Pump
+- **Buttons**: Temperature Down, Temperature Up, Pump, Air
+- **Water Sensor**: Optical Water sensor (H2O) input
+- **Temperature Sensor**: Temperature sensor input (digital)
 
 ## Pin Configuration
 
 | Pin | Function |
 |-----|----------|
-| PB3 | DATA - Serial data to shift registers |
+| PB3 | DATA - Serial data output to shift registers |
 | PB5 | CLOCK - Clock signal to shift registers |
 | PD5 | LATCH/STROBE - Latch signal to shift registers |
+| PB4 | DATA - Serial data input from shift register |
 
 ## Shift Register Chain
 
