@@ -1,6 +1,6 @@
 # Spa Controller with 7 Segment Display Driver
 
-Firmware for a multiplexed 3-digit 7-segment display with status LEDs, designed for the Spa Control device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
+Firmware for an after market Spa Pool Controller incorporating a multiplexed 3-digit 7-segment display with status LEDs, uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
 
 ## Hardware
 
@@ -52,10 +52,6 @@ All signals idle HIGH:
 - **Data**: Sent directly (no inversion - caller provides raw wire values)
 - **Clock**: Rising edge (LOW→HIGH) samples data (per HEF4094B datasheet)
 - **Latch**: Active LOW pulse transfers data to outputs
-
-**Pre-sequence** (start of each 16-bit word):
-1. Data LOW (clock still HIGH) - signals start of transmission
-2. Clock LOW (data still LOW) - ready for first bit
 
 **Per-bit timing**:
 1. Set data while clock is LOW
