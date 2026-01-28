@@ -1,4 +1,4 @@
-# Seven Segment Display Driver
+# Spa Controller with 7 Segment Display Driver
 
 Firmware for a multiplexed 3-digit 7-segment display with status LEDs, designed for the Spa Control device. Uses the SevSegShift library for shift register-based multiplexing on an ATmega8A.
 
