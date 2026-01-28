@@ -51,6 +51,23 @@ Two cascaded 4094 shift registers receive 16 bits per update:
 | QP6 | e |
 | QP7 | a |
 
+
+One 4021 shift register transmit 8 bits per update:
+
+**4021** (DIP switch + Push Buttons status):
+| Input | Function |
+|--------|----------|
+| D0 | DIP Switch 1 |
+| D1 | DIP Switch 2 |
+| D2 | DIP Switch 3 |
+| D3 | DIP Switch 4 |
+| D4 | Pump Push Button |
+| D5 | Air Push Button |
+| D6 | Temperature Up Push Button |
+| D7 | Temperature Down Button |
+| Output | Function |
+| Q7 | Data to MCU
+
 ## Signal Timing
 
 All signals idle HIGH:
