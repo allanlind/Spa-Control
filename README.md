@@ -20,7 +20,7 @@ Firmware for an after market Spa Pool Controller incorporating a multiplexed 3-d
 | PB3 | DATA - Serial data output to shift registers |
 | PB5 | CLOCK - Clock signal to shift registers |
 | PD5 | LATCH/STROBE - Latch signal to shift registers |
-| PB4 | DATA - Serial data input from shift register |
+| PB4 | DATA-IN - Serial data input from shift register |
 
 ## Shift Register Chain
 
