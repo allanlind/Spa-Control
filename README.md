@@ -25,10 +25,11 @@ Two cascaded 4094 shift registers receive 16 bits per update:
 **First 4094** (LED status + digit selection):
 | Output | Function |
 |--------|----------|
-| QP0 | Heater LED |
-| QP1 | Auto LED |
-| QP3 | Air LED |
-| QP4 | Pump LED |
+| QP0 | Air LED (high for green low for red) |
+| QP1 | Heater LED (low for red) |
+| QP2 | Auto LED (low for red) |
+| QP3 | Air LED (high for red low for green) |
+| QP4 | Pump LED (low for green) |
 | QP5 | Cathode 1 (left digit) |
 | QP6 | Cathode 3 (right digit) |
 | QP7 | Cathode 2 (middle digit) |
